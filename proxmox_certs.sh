@@ -4,8 +4,7 @@
 set -euo pipefail
 # 1. First install Proxmox VE
  
-sudo apt-get install jq curl openssl procps -Y
-sudo apt-get install 
+sudo apt-get install jq curl openssl procps -y
 # 2. Verify Proxmox installation
  
 
@@ -14,10 +13,10 @@ sudo apt-get install
 # 1. First install Proxmox VE
 #bash install.sh  # Your Proxmox installation script
 read -p "Your Cloudflare API token. Obtain it from the Cloudflare dashboard under " CFAPITOKEN   
-read -p "what is your ZONE ID FOR CLOUDFLARE DOMAIN Your Cloudflare Zone ID (found in the Cloudflare dashboard under the DNS settings for your domain" ZONEID      
-read -p "what is your DOMAIN Name for the domain you want to use Your domain (e.g., example.com). Use the root domain without 'www' or subdomains." DOMAINNAME      
-read -p "what is your Email Address" EMAILADDRESS
-# 2. Verify Proxmox installation
+read -p "Your Cloudflare API token. Obtain it from the Cloudflare dashboard: " CFAPITOKEN   
+read -p "Your Cloudflare Zone ID (found in the Cloudflare dashboard under the DNS settings for your domain): " ZONEID      
+read -p "Your domain (e.g., example.com). Use the root domain without 'www' or subdomains: " DOMAINNAME      
+read -p "Your Email Address: " EMAILADDRESS
 pvesh get version
 systemctl status pveproxy
 
@@ -88,17 +87,15 @@ generate_csr() {
     if [[ -f "${tmp_dir}/csr.pem" ]]; then
     CSR=$(tr -d '\n' < "${tmp_dir}/csr.pem")
     
-    if [[ ! -f "${tmp_dir}/privkey.pem" ]]; then
-        error_exit "Private key file does not exist"
-    fi
-    
-    PRIVATE_KEY=$(< "${tmp_dir}/privkey.pem")
+    if [[ ! -f "${tmp_dir}/csr.pem" ]]; then
         error_exit "CSR file does not exist"
     fi
     CSR=$(tr -d '\n' < "${tmp_dir}/csr.pem")
-    PRIVATE_KEY=$(< "${tmp_dir}/privkey.pem")
     
-    # Cleanup
+    if [[ ! -f "${tmp_dir}/privkey.pem" ]]; then
+        error_exit "Private key file does not exist"
+    fi
+    PRIVATE_KEY=$(< "${tmp_dir}/privkey.pem")
     rm -rf "${tmp_dir}"
 }
 
@@ -145,9 +142,7 @@ deploy_certificate() {
             error_exit "Failed to restart pveproxy on $node"
         fi
         
-        # Deploy certificate and key
-        echo "$CERT" > "$cert_path" || error_exit "Failed to deploy certificate to $node"
-        echo "$PRIVATE_KEY" > "$key_path" || error_exit "Failed to deploy private key to $node"
+        mkdir -p "$cert_dir" || error_exit "Failed to create certificate directory on $node"
         chmod 640 "$cert_path" "$key_path"
         
         # Restart pveproxy on the node
@@ -163,8 +158,17 @@ deploy_certificate() {
         log "Deploying to node: $node"
         
         # Create certificate directory if it doesn't exist
-        local cert_path="${CERT_DIR}/${node}/pveproxy-ssl.pem"
-        local key_path="${CERT_DIR}/${node}/pveproxy-ssl.key"
+    for node in $nodes; do
+        log "Deploying to node: $node"
+        
+        # Create certificate directory if it doesn't exist
+        local cert_dir="${CERT_DIR}/${node}"
+        local cert_path="${cert_dir}/pveproxy-ssl.pem"
+        local key_path="${cert_dir}/pveproxy-ssl.key"
+        
+        if [ ! -d "$cert_dir" ]; then
+            mkdir -p "$cert_dir" || error_exit "Failed to create certificate directory on $node"
+        fi
         
         # Deploy certificate and key
         echo "$CERT" > "$cert_path" || error_exit "Failed to deploy certificate to $node"
@@ -178,12 +182,6 @@ deploy_certificate() {
         log "Certificate deployed successfully to $node"
     done
 }
-# Configure swap space
-configure_swap() {
-    log "Checking and configuring swap space..."
-    
-    # Check if free is installed
-    if ! command -v free &> /dev/null; then
         error_exit "free command could not be found, please install it to proceed"
     fi
     
@@ -274,3 +272,8 @@ fi
 
 # Execute main function
 main "$@"
+
+
+
+
+
