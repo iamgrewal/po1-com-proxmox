@@ -9,12 +9,16 @@ else
     CURRENT_PHASE="1"
 fi
 
+read -p "what is your node name" NODENAME
+read -p "What is your node IP Address :" NODEIP
+read -p "What is your node SUBNET MASK :" SUBNETMASK
+read -p "What is your network interface name :" INTERFACE_NAME
 # Variables
-NODE_NAME="node4.po1.me"
-NODE_IP="192.168.51.94"
-NETMASK="255.255.255.0"
-GATEWAY="192.168.51.1"
-INTERFACE="enp5s0f1"
+NODE_NAME=$NODENAME
+NODE_IP=$NODEIP
+NETMASK=$SUBNETMASK
+GATEWAY=$SUBNETMASK
+INTERFACE=$INTERFACE_NAME
 BRIDGE="vmbr0"
 LOG_FILE="/var/log/proxmox_install.log"
 NETWORK_BACKUP="/etc/network/interfaces.backup"
