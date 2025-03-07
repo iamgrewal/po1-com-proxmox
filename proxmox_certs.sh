@@ -3,14 +3,26 @@
 # Error handling
 set -euo pipefail
 # 1. First install Proxmox VE
-bash install.sh  # Your Proxmox installation script
+ 
+sudo apt-get install jq curl openssl procps -Y
+sudo apt-get install 
+# 2. Verify Proxmox installation
+ 
 
+# 3. Then run the certificate/swap management script
+#sudo ./proxmox-certs.sh
+# 1. First install Proxmox VE
+#bash install.sh  # Your Proxmox installation script
+read -p "Your Cloudflare API token. Obtain it from the Cloudflare dashboard under " CFAPITOKEN   
+read -p "what is your ZONE ID FOR CLOUDFLARE DOMAIN Your Cloudflare Zone ID (found in the Cloudflare dashboard under the DNS settings for your domain" ZONEID      
+read -p "what is your DOMAIN Name for the domain you want to use Your domain (e.g., example.com). Use the root domain without 'www' or subdomains." DOMAINNAME      
+read -p "what is your Email Address" EMAILADDRESS
 # 2. Verify Proxmox installation
 pvesh get version
 systemctl status pveproxy
 
 # 3. Then run the certificate/swap management script
-sudo ./proxmox-certs.sh
+#sudo ./proxmox-certs.sh
 apt-get install jq curl openssl procps -Y
 apt-get install 
 # Check if jq is installed
@@ -30,14 +42,14 @@ if ! command -v pvesh &> /dev/null; then
     echo "pvesh could not be found, please install pvesh to proceed"
     exit 1
 fi
-curl 'https://api.cloudflare.com/client/v4/zones?account.id=XXX' \
---header 'Authorization: Bearer XX' \
+curl 'https://api.cloudflare.com/client/v4/zones?account.id=$ZONEID' \
+--header 'Authorization: Bearer $CF_API_TOKEN' \
 --header 'Content-Type: application/json' | jq
 # Configuration
-CF_API_TOKEN="9RiK9I7u9uxw3x1sTM_TmZt3RPAx89i9t3EqZGtT"  # Your Cloudflare API token. Obtain it from the Cloudflare dashboard under "API Tokens".
-ZONE_ID="b4d482a55a935eb3bede9adfe4ba184d"       # Your Cloudflare Zone ID (found in the Cloudflare dashboard under the DNS settings for your domain)
-DOMAIN="po1.me"        # Your domain (e.g., example.com). Use the root domain without 'www' or subdomains.
-EMAIL="iamgrewal@gmail.com"         # Your Cloudflare email. Used for Cloudflare account identification and notifications.
+CF_API_TOKEN="$CFAPITOKEN"  # Your Cloudflare API token. Obtain it from the Cloudflare dashboard under "API Tokens".
+ZONE_ID="$ZONEID"       # Your Cloudflare Zone ID (found in the Cloudflare dashboard under the DNS settings for your domain)
+DOMAIN="$DOMAINNAME"        # Your domain (e.g., example.com). Use the root domain without 'www' or subdomains.
+EMAIL="$EMAILADDRESS"         # Your Cloudflare email. Used for Cloudflare account identification and notifications.
 # Directory where Proxmox nodes' certificates will be stored
 CERT_DIR="/etc/pve/nodes"  # Proxmox certificate directory
 
