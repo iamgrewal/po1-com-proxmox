@@ -46,10 +46,20 @@ case $CURRENT_PHASE in
         cp /etc/network/interfaces "$NETWORK_BACKUP" || error_exit "Failed to backup network configuration."
 
         # Step 2: Repository Setup
-        log "Adding Proxmox VE repository key..."
-        wget https://enterprise.proxmox.com/debian/proxmox-release-bookworm.gpg -O /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg || error_exit "Failed to download repository key."
-        sha512sum /etc/apt/trusted.gpg.d/proxmox-release-bookworm.gpg || error_exit "Failed to verify repository key."
-        log "Updating package lists..."
+        log "Setting up Proxmox Community repositories..."
+        
+        # Update main sources list
+        wget https://gist.githubusercontent.com/hakerdefo/5e1f51fa93ff37871b9ff738b05ba30f/raw/7b5a0ff76b7f963c52f2b33baa20d8c4033bce4d/sources.list -O /etc/apt/sources.list || error_exit "Failed to update sources.list"
+        
+        # Add PVE community repository
+        echo "deb http://download.proxmox.com/debian/pve bookworm pve-no-subscription" > /etc/apt/sources.list.d/pve-community.list || error_exit "Failed to add PVE community repo"
+        
+        # Add Ceph Squid community repository
+        echo "deb http://download.proxmox.com/debian/ceph-squid bookworm no-subscription" > /etc/apt/sources.list.d/ceph-squid-community.list || error_exit "Failed to add Ceph community repo"
+        
+    
+        
+        log "Repository setup completed, updating package lists..."
         apt update && apt full-upgrade -y || error_exit "Failed to update package lists."
 
         # Step 3: Kernel Installation
