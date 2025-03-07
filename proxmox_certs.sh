@@ -30,8 +30,8 @@ if ! command -v pvesh &> /dev/null; then
     echo "pvesh could not be found, please install pvesh to proceed"
     exit 1
 fi
-curl 'https://api.cloudflare.com/client/v4/zones?account.id=f054fc1b127a686563ea2edd60e28d5c' \
---header 'Authorization: Bearer 9RiK9I7u9uxw3x1sTM_TmZt3RPAx89i9t3EqZGtT' \
+curl 'https://api.cloudflare.com/client/v4/zones?account.id=XXX' \
+--header 'Authorization: Bearer XX' \
 --header 'Content-Type: application/json' | jq
 # Configuration
 CF_API_TOKEN="9RiK9I7u9uxw3x1sTM_TmZt3RPAx89i9t3EqZGtT"  # Your Cloudflare API token. Obtain it from the Cloudflare dashboard under "API Tokens".
