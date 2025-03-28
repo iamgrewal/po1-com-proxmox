@@ -1,0 +1,154 @@
+#!/bin/bash
+# Proxmox VE OVS Network Config Generator
+
+# Validates IPv4 format
+is_valid_ip() {
+  local ip="$1"
+  [[ "$ip" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]] || return 1
+  local IFS=.
+  local -a parts=($ip)
+  for octet in "${parts[@]}"; do
+    [[ "$octet" -ge 0 && "$octet" -le 255 ]] || return 1
+  done
+  return 0
+}
+
+interface_exists() { ip link show "$1" >/dev/null 2>&1; }
+is_root() { [[ $EUID -eq 0 ]]; }
+is_ovs_installed() { command -v ovs-vsctl >/dev/null 2>&1; }
+interfaces_file_exists() { test -f /etc/network/interfaces; }
+backup_successful() { test -f "$1"; }
+
+if ! is_root; then echo "[ERROR] Must be run as root."; exit 1; fi
+if ! is_ovs_installed; then echo "[ERROR] Open vSwitch is not installed."; exit 1; fi
+if ! interfaces_file_exists; then echo "[ERROR] /etc/network/interfaces not found."; exit 1; fi
+if [[ ! -w /etc/network/ ]]; then echo "[ERROR] No write permissions."; exit 1; fi
+
+echo "=== Proxmox VE OVS Network Config Generator ==="
+
+# Show interfaces
+echo -e "\nDetected interfaces:"
+ip addr show | egrep '^ *inet' | grep brd | awk '{ print "- " $2 " on " $NF }' | sed 's:/[0-9]*$::'
+echo
+
+# Node name
+while true; do
+  read -p "Enter node name (e.g., pve1): " NODE_NAME
+  [[ -n "$NODE_NAME" ]] && break || echo "[ERROR] Cannot be empty."
+done
+
+# Subnet confirmation
+echo -e "\nProposed subnets:"
+echo "  VLAN1  ➜  192.168.51.0/24"
+echo "  VLAN50 ➜  10.50.10.0/24"
+echo "  VLAN55 ➜  10.55.10.0/24"
+read -p "Use these subnets? [Y/n]: " CONFIRM
+CONFIRM="${CONFIRM,,}"
+if [[ "$CONFIRM" != "n" && "$CONFIRM" != "no" ]]; then
+  MGMT_PREFIX="192.168.51"
+  CLUSTER_PREFIX="10.50.10"
+  CEPH_PREFIX="10.55.10"
+else
+  while true; do read -p "Enter VLAN1 subnet prefix: " MGMT_PREFIX; is_valid_ip "$MGMT_PREFIX.1" && break; done
+  while true; do read -p "Enter VLAN50 subnet prefix: " CLUSTER_PREFIX; is_valid_ip "$CLUSTER_PREFIX.1" && break; done
+  while true; do read -p "Enter VLAN55 subnet prefix: " CEPH_PREFIX; is_valid_ip "$CEPH_PREFIX.1" && break; done
+fi
+
+# IP inputs
+while true; do read -p "Last octet for VLAN1 (e.g. 200): " MGMT_OCT; is_valid_ip "$MGMT_PREFIX.$MGMT_OCT" && break; done
+MGMT_IP="$MGMT_PREFIX.$MGMT_OCT"; MGMT_NETMASK="255.255.255.0"; MGMT_GW="$MGMT_PREFIX.1"
+
+while true; do read -p "Last octet for VLAN50 (e.g. 11): " CLUSTER_OCT; is_valid_ip "$CLUSTER_PREFIX.$CLUSTER_OCT" && break; done
+CLUSTER_IP="$CLUSTER_PREFIX.$CLUSTER_OCT"; CLUSTER_NETMASK="255.255.255.0"
+
+while true; do read -p "Last octet for VLAN55 (e.g. 21): " CEPH_OCT; is_valid_ip "$CEPH_PREFIX.$CEPH_OCT" && break; done
+CEPH_IP="$CEPH_PREFIX.$CEPH_OCT"; CEPH_NETMASK="255.255.255.0"
+
+# Interface prompts
+read -p "First NIC for bond (e.g., enp6s6f0): " ADAPTER1
+read -p "Second NIC for bond (e.g., enp6s6f1): " ADAPTER2
+read -p "NIC for Ceph/Cluster (e.g., enp6s5): " ADAPTER3
+
+# Backup
+BACKUP="/etc/network/interfaces.bak_$(date +%F_%T)"
+cp /etc/network/interfaces "$BACKUP" && echo "[INFO] Backup saved to $BACKUP"
+
+# Write new config
+cat <<EOF >/etc/network/interfaces
+auto lo
+iface lo inet loopback
+
+auto $ADAPTER1
+iface $ADAPTER1 inet manual
+    ovs_type OVSPort
+    ovs_bridge vmbr0
+    ovs_mtu 9000
+
+auto $ADAPTER2
+iface $ADAPTER2 inet manual
+    ovs_type OVSPort
+    ovs_bridge vmbr0
+    ovs_mtu 9000
+
+auto bond0
+iface bond0 inet manual
+    ovs_type OVSBond
+    ovs_bridge vmbr0
+    ovs_bonds $ADAPTER1 $ADAPTER2
+    ovs_options bond_mode=balance-tcp lacp=active other_config:lacp-time=fast
+    ovs_mtu 9000
+
+auto vmbr0
+iface vmbr0 inet manual
+    ovs_type OVSBridge
+    ovs_ports bond0 vlan1
+    ovs_mtu 9000
+    up ovs-vsctl set Bridge \$IFACE rstp_enable=true
+
+auto vlan1
+iface vlan1 inet static
+    address $MGMT_IP
+    netmask $MGMT_NETMASK
+    gateway $MGMT_GW
+    ovs_type OVSIntPort
+    ovs_bridge vmbr0
+    ovs_options vlan_mode=access
+    dns-nameservers 192.168.51.1
+    metric 10
+
+auto $ADAPTER3
+iface $ADAPTER3 inet manual
+    ovs_type OVSPort
+    ovs_bridge vmbr1
+    ovs_mtu 9000
+
+auto vmbr1
+iface vmbr1 inet manual
+    ovs_type OVSBridge
+    ovs_ports $ADAPTER3 vlan50 vlan55
+    ovs_mtu 9000
+    up ovs-vsctl set Bridge \$IFACE rstp_enable=true
+
+auto vlan50
+iface vlan50 inet static
+    address $CLUSTER_IP
+    netmask $CLUSTER_NETMASK
+    ovs_type OVSIntPort
+    ovs_bridge vmbr1
+    ovs_options tag=50
+    dns-nameservers 192.168.51.1
+    ovs_mtu 9000
+
+auto vlan55
+iface vlan55 inet static
+    address $CEPH_IP
+    netmask $CEPH_NETMASK
+    ovs_type OVSIntPort
+    ovs_bridge vmbr1
+    ovs_options tag=55
+    dns-nameservers 192.168.51.1
+    ovs_mtu 9000
+EOF
+
+echo -e "\n[SUCCESS] Configuration written to /etc/network/interfaces"
+echo "[NEXT STEP] Run 'systemctl restart networking' or reboot to apply."
