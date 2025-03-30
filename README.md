@@ -67,5 +67,65 @@ then cd into the subfolder, review and adapt the config file and launch
 ```
 
 ### More Info
+AddedProxmox Network Recovery Tool on 3.29.2025
+```bash
+[./proxmox-3-nic-setup.sh](https://github.com/iamgrewal/po1-com-proxmox/blob/main/proxmox-3-nic-setup.sh)
+# Proxmox Network Recovery Tool
 
+This script (`convert_to_linux_network.sh`) is designed to assist with the migration from Open vSwitch (OVS) networking to standard Linux bridging on a Proxmox VE (PVE) system. It provides an interactive menu to configure and apply Linux-style network settings, change the hostname, restore network configurations from backups, and configure IP forwarding.
+
+## Features
+
+* **Interactive Configuration:** User-friendly menu for configuring network settings.
+* **Linux Bridging:** Converts OVS configurations to standard Linux bridges (`vmbr0`, `vmbr1`).
+* **Bonding Support:** Configures Linux bonding (`bond0`) for link aggregation.
+* **VLAN Support:** Configures VLAN interfaces (`vlan50`, `vlan55`).
+* **Hostname Management:** Allows changing the Proxmox node's hostname and updates related configuration files.
+* **Backup and Restore:** Backs up the `/etc/network/interfaces` file before making changes and provides an option to restore from backups.
+* **IP Forwarding:** Configures IP forwarding persistently.
+* **Logging:** Logs all actions and errors to `/var/log/network_migration.log`.
+* **Interface Checking:** Provides an option to check the currently available network interfaces and their IP addresses.
+
+## Usage
+
+1.  **Download the script:**
+    ```bash
+    wget https://raw.githubusercontent.com/iamgrewal/po1-com-proxmox/refs/heads/main/proxmox-3-nic-setup.sh
+    ```
+2.  **Make the script executable:**
+    ```bash
+    chmod +x convert_to_linux_network.sh
+    ```
+3.  **Run the script as root:**
+    ```bash
+    sudo ./proxmox-3-nic-setup.sh
+    ```
+4.  **Follow the interactive menu to configure your network settings.**
+
+## Prerequisites
+
+* Root access on a Proxmox VE system.
+* Basic understanding of Linux networking concepts.
+* Required packages: `ifenslave`, `bridge-utils`, `ethtool`, `iproute2`, `vlan`. The script will attempt to install these, but manual installation might be required if the system is not configured for package management.
+
+## Script Overview
+
+The script performs the following actions:
+
+* **Logging:** Utilizes logging functions to record actions and errors.
+* **Helper Functions:** Includes functions for user input, IP validation, interface checks, and package installation.
+* **Configuration Functions:** Functions to configure loopback, bonding, bridge, and VLAN interfaces.
+* **Main Configuration Function:** Applies the Linux network configuration.
+* **Main Script Logic:** Presents an interactive menu to the user.
+
+## Important Notes
+
+* Always back up your system before making network configuration changes.
+* Verify the network configuration after applying changes.
+* Review the log file (`/var/log/network_migration.log`) for any errors.
+* This script is designed for specific network configurations; adjust the script as needed for your environment.
+
+## Author
+
+Jatinder Grewal ([https://github.com/iamgrewal](https://github.com/iamgrewal//po1-com-proxmox))
 
