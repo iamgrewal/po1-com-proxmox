@@ -69,7 +69,9 @@ then cd into the subfolder, review and adapt the config file and launch
 ### More Info
 AddedProxmox Network Recovery Tool on 3.29.2025
 ```bash
+
 [./proxmox-3-nic-setup.sh](https://github.com/iamgrewal/po1-com-proxmox/blob/main/proxmox-3-nic-setup.sh)
+```
 # Proxmox Network Recovery Tool
 
 This script (`convert_to_linux_network.sh`) is designed to assist with the migration from Open vSwitch (OVS) networking to standard Linux bridging on a Proxmox VE (PVE) system. It provides an interactive menu to configure and apply Linux-style network settings, change the hostname, restore network configurations from backups, and configure IP forwarding.
