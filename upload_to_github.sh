@@ -6,7 +6,7 @@
 REPO_OWNER="iamgrewal"
 REPO_NAME="po1-com-proxmox"
 BRANCH="main"
-GITHUB_TOKEN="YOUR_GITHUB_TOKEN"  # Replace with your GitHub token
+GITHUB_TOKEN="$YOUR_GITHUB_TOKEN"  # Replace with your GitHub token
 
 # Files to upload
 FILES=(
@@ -18,7 +18,7 @@ FILES=(
 # Function to upload a file to GitHub
 upload_file() {
     local file="$1"
-    local content=$(cat "$file" | base64)
+    local content=$(cat "$file" | base64 -w 0)  # -w 0 prevents line wrapping
     local message="Add $file for automated installation"
     
     # Check if file already exists in the repository
@@ -30,18 +30,34 @@ upload_file() {
         sha=$(echo "$response" | grep -o '"sha": "[^"]*"' | cut -d'"' -f4)
     fi
     
-    # Prepare JSON payload
-    local data="{\"message\":\"$message\",\"content\":\"$content\",\"branch\":\"$BRANCH\""
+    # Create a temporary JSON file for the payload
+    local temp_json=$(mktemp)
+    
+    # Write JSON to temporary file using proper JSON formatting
+    cat > "$temp_json" <<EOF
+{
+  "message": "$message",
+  "content": "$content",
+  "branch": "$BRANCH"
+EOF
+    
+    # Add sha if it exists
     if [[ -n "$sha" ]]; then
-        data="$data,\"sha\":\"$sha\""
+        echo "  ,\"sha\": \"$sha\"" >> "$temp_json"
     fi
-    data="$data}"
+    
+    # Close the JSON object
+    echo "}" >> "$temp_json"
     
     # Upload file
     echo "Uploading $file to GitHub..."
     curl -s -X PUT -H "Authorization: token $GITHUB_TOKEN" \
-        -d "$data" \
+        -H "Content-Type: application/json" \
+        --data-binary @"$temp_json" \
         "https://api.github.com/repos/$REPO_OWNER/$REPO_NAME/contents/$file"
+    
+    # Clean up temporary file
+    rm -f "$temp_json"
     
     echo "Upload of $file completed."
 }
