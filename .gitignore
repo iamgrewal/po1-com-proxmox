@@ -1,0 +1,12 @@
+# Ignore the 'old' directory and its contents
+old/
+old/*
+
+# Ignore files with the .old extension
+*.old
+
+# Ignore common shell script temporary files
+*.sh~
+*.bak
+*.swp
+*.tmp
