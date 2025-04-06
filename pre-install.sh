@@ -12,9 +12,62 @@
 # - Preparing boot, swap, and root partitions
 # =============================================================================
 # by Jatin Grewal
-# Last updated: 2023-10-01
+# Last updated: 2025-06-04
 # email @jgrewal@po1.me
 # Enable strict error handling
+ 
+
+# =============================================================================
+# Proxmox Pre-Installation Disk Setup Script
+#
+# Description:
+# This script automates the preparation of disks for Proxmox VE installation.
+# It includes functionality for detecting available drives, categorizing them
+# by type (NVMe, SSD, HDD), and partitioning them with appropriate layouts.
+# The script supports both interactive and automatic modes, and it configures
+# filesystems based on system memory (ext4 or ZFS).
+#
+# Features:
+# - Detects and categorizes drives (NVMe, SSD, HDD).
+# - Supports interactive or automatic drive selection.
+# - Creates GPT partition tables and partitions for EFI, boot, swap, and root.
+# - Configures LVM or ZFS based on available system memory.
+# - Logs all operations to a log file for debugging and auditing.
+#
+# Requirements:
+# - Bash shell
+# - Required commands: lsblk, whiptail, wipefs, dd, parted, mkfs.vfat, mkfs.ext4,
+#   pvcreate, vgcreate, lvcreate, mkswap, zfsutils-linux (for ZFS).
+#
+# Usage:
+# - Interactive mode: Run the script without arguments to manually select drives.
+# - Automatic mode: Run the script with the `--auto` flag for automatic drive selection.
+#
+# Example:
+#   ./pre-install.sh          # Interactive mode
+#   ./pre-install.sh --auto   # Automatic mode
+#
+# Notes:
+# - This script is destructive and will erase all data on the selected drives.
+# - Ensure you have backups of any important data before running this script.
+# - The script dynamically adjusts swap size based on system memory.
+#
+ 
+#
+# Logs:
+# - Logs are written to /var/log/proxmox-pre-install.log by default.
+# - If the default log location is unavailable, logs are written to /tmp.
+#
+# Next Steps After Running:
+# - Mount the created partitions and proceed with Proxmox installation.
+# - For ZFS, import the ZFS pool and configure datasets as needed.
+# =============================================================================
+ 
+
+# -----------------------------------------------------------------------------
+# Display final configuration and next steps
+# -----------------------------------------------------------------------------
+
 set -euo pipefail
 
 # -----------------------------------------------------------------------------
