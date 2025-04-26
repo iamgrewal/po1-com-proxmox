@@ -18,7 +18,7 @@ fi
 hostnamectl set-hostname "$MYHOSTNAME"
 
 # Get the IPv4 address of eth0 (consider making this more dynamic)
-MYIP=$(ip -4 addr show eth0 | grep -oP 'inet\s+\K[\d.]+' || true)
+MYIP=$(ip -4 addr show vmbr0 | grep -oP 'inet\s+\K[\d.]+' || true)
 export MYIP
 
 # Add hostname and domain entries to /etc/hosts if they don't exist
